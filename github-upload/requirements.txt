@@ -1,0 +1,6 @@
+pygame==2.6.1
+customtkinter==5.2.1
+pystray==0.19.4
+numpy>=1.24.0
+pillow>=9.0.0
+pywin32>=306; platform_system=="Windows"
