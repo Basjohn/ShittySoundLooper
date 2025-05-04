@@ -20,6 +20,20 @@ if sys.platform == 'win32':
     import pystray
     import ctypes
 
+# Define custom dark theme colors
+DARK_THEME = {
+    "bg_color": "#121212",        # Very dark gray (almost black) for backgrounds
+    "fg_color": "#F5F5F5",        # Off-white for text
+    "button_color": "#2D2D2D",    # Dark gray for buttons
+    "hover_color": "#3D3D3D",     # Slightly lighter gray for hover states
+    "entry_color": "#1E1E1E",     # Dark gray for input fields
+    "border_color": "#3D3D3D",    # Medium gray for borders
+    "slider_color": "#4D4D4D",    # Medium-light gray for sliders
+    "slider_progress": "#BBBBBB", # Light gray for slider progress
+    "disabled_text": "#6D6D6D",   # Medium gray for disabled text
+    "disabled_button": "#1D1D1D", # Very dark gray for disabled buttons
+}
+
 class ShittySoundLooper:
     def __init__(self):
         # Initialize pygame mixer with higher quality settings
@@ -49,6 +63,9 @@ class ShittySoundLooper:
         # Create main window
         self.window = ctk.CTk()
         self.window.title("Shitty Sound Looper")
+        
+        # Apply custom dark theme
+        self._apply_dark_theme()
         
         # Make window resizable and set minimum size - 25px wider
         self.window.resizable(True, True)
@@ -149,11 +166,13 @@ class ShittySoundLooper:
         dialog.geometry("350x120")
         dialog.attributes('-topmost', True)
         dialog.resizable(False, False)
+        self._apply_dark_theme_to_dialog(dialog)
         
         label = ctk.CTkLabel(dialog, text="Exit or Minimize to Tray?")
         label.pack(pady=20)
         
         button_frame = ctk.CTkFrame(dialog)
+        button_frame.configure(fg_color="transparent")
         button_frame.pack(pady=10)
         
         exit_button = ctk.CTkButton(button_frame, text="Exit", command=lambda: self.quit_and_destroy(dialog))
@@ -268,12 +287,14 @@ class ShittySoundLooper:
         about_dialog.geometry("400x300")
         about_dialog.attributes('-topmost', True)
         about_dialog.resizable(False, False)
+        self._apply_dark_theme_to_dialog(about_dialog)
         
         message = "Made for my own shitty sleep, shared freely for yours.\nYou can always donate to my dumbass though or buy my shitty literature."
         label = ctk.CTkLabel(about_dialog, text=message, wraplength=360)
         label.pack(pady=(20, 15))
         
         link_frame = ctk.CTkFrame(about_dialog)
+        link_frame.configure(fg_color="transparent")
         link_frame.pack(pady=(0, 20))
         
         paypal_button = ctk.CTkButton(
@@ -303,15 +324,14 @@ class ShittySoundLooper:
         )
         amazon_button.pack(side="left", padx=5)
         
-        about_dialog.transient(self.window)
-        about_dialog.grab_set()
-        
-        about_dialog.update_idletasks()
+        # Center the dialog on the main window
+        self.window.update_idletasks()
         x = self.window.winfo_x() + (self.window.winfo_width() - about_dialog.winfo_width()) // 2
         y = self.window.winfo_y() + (self.window.winfo_height() - about_dialog.winfo_height()) // 2
         about_dialog.geometry(f"+{x}+{y}")
         
-        self.window.wait_window(about_dialog)
+        about_dialog.transient(self.window)
+        about_dialog.grab_set()
         
     def browse_file(self):
         # Determine initial directory
@@ -637,7 +657,7 @@ class ShittySoundLooper:
                 # Schedule quit on main thread
                 self.window.after(0, self.safe_quit)
             
-            # Create the menu
+            # Create the menu with dark theme styling
             menu = pystray.Menu(
                 pystray.MenuItem("Play/Pause", on_play_pause),
                 pystray.MenuItem("Restore", on_restore),
@@ -646,6 +666,17 @@ class ShittySoundLooper:
             
             # Create the icon
             self.tray_icon = pystray.Icon("ssl_tray", icon_image, "Shitty Sound Looper", menu)
+            
+            # Apply dark theme to the system tray menu
+            if hasattr(self.tray_icon, '_menu') and sys.platform == 'win32':
+                try:
+                    # Set the menu's background and text colors
+                    self.tray_icon._menu_background_color = DARK_THEME["bg_color"]
+                    self.tray_icon._menu_text_color = DARK_THEME["fg_color"]
+                    self.tray_icon._menu_highlight_color = DARK_THEME["hover_color"]
+                except:
+                    # If custom styling fails, continue with default styling
+                    pass
             
             # Handle left-click on icon
             def setup(icon):
@@ -704,9 +735,76 @@ class ShittySoundLooper:
     def run(self):
         self.window.mainloop()
 
+    def _apply_dark_theme(self):
+        """Apply a custom dark theme with black, white and shades of gray"""
+        # Force dark mode regardless of OS settings
+        ctk.set_appearance_mode("dark")
+        
+        # Override the default CustomTkinter theme colors with our monochrome palette
+        ctk.ThemeManager.theme["CTk"]["fg_color"] = [DARK_THEME["bg_color"], DARK_THEME["bg_color"]]
+        ctk.ThemeManager.theme["CTkFrame"]["fg_color"] = [DARK_THEME["bg_color"], DARK_THEME["bg_color"]]
+        ctk.ThemeManager.theme["CTkFrame"]["border_color"] = [DARK_THEME["border_color"], DARK_THEME["border_color"]]
+        
+        # Button styling
+        ctk.ThemeManager.theme["CTkButton"]["fg_color"] = [DARK_THEME["button_color"], DARK_THEME["button_color"]]
+        ctk.ThemeManager.theme["CTkButton"]["hover_color"] = [DARK_THEME["hover_color"], DARK_THEME["hover_color"]]
+        ctk.ThemeManager.theme["CTkButton"]["border_color"] = [DARK_THEME["border_color"], DARK_THEME["border_color"]]
+        ctk.ThemeManager.theme["CTkButton"]["text_color"] = [DARK_THEME["fg_color"], DARK_THEME["fg_color"]]
+        ctk.ThemeManager.theme["CTkButton"]["text_color_disabled"] = [DARK_THEME["disabled_text"], DARK_THEME["disabled_text"]]
+        
+        # Entry field styling
+        ctk.ThemeManager.theme["CTkEntry"]["fg_color"] = [DARK_THEME["entry_color"], DARK_THEME["entry_color"]]
+        ctk.ThemeManager.theme["CTkEntry"]["border_color"] = [DARK_THEME["border_color"], DARK_THEME["border_color"]]
+        ctk.ThemeManager.theme["CTkEntry"]["text_color"] = [DARK_THEME["fg_color"], DARK_THEME["fg_color"]]
+        
+        # Label styling
+        ctk.ThemeManager.theme["CTkLabel"]["fg_color"] = ["transparent", "transparent"]
+        ctk.ThemeManager.theme["CTkLabel"]["text_color"] = [DARK_THEME["fg_color"], DARK_THEME["fg_color"]]
+        
+        # Slider styling
+        ctk.ThemeManager.theme["CTkSlider"]["fg_color"] = [DARK_THEME["slider_color"], DARK_THEME["slider_color"]]
+        ctk.ThemeManager.theme["CTkSlider"]["progress_color"] = [DARK_THEME["slider_progress"], DARK_THEME["slider_progress"]]
+        ctk.ThemeManager.theme["CTkSlider"]["button_color"] = [DARK_THEME["button_color"], DARK_THEME["button_color"]]
+        ctk.ThemeManager.theme["CTkSlider"]["button_hover_color"] = [DARK_THEME["hover_color"], DARK_THEME["hover_color"]]
+        
+        # Apply to window
+        self.window.configure(fg_color=DARK_THEME["bg_color"])
+        
+        # Custom title bar styling for Windows
+        if sys.platform == 'win32':
+            try:
+                # Set dark mode for title bar and system controls
+                DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+                hwnd = int(self.window.winfo_id())
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, 
+                    DWMWA_USE_IMMERSIVE_DARK_MODE,
+                    ctypes.byref(ctypes.c_int(1)), 
+                    ctypes.sizeof(ctypes.c_int)
+                )
+            except Exception as e:
+                print(f"Error setting dark title bar: {e}")
+
+    def _apply_dark_theme_to_dialog(self, dialog):
+        """Apply dark theme to a dialog window including title bar"""
+        # Apply background color
+        dialog.configure(fg_color=DARK_THEME["bg_color"])
+        
+        # Apply dark title bar on Windows
+        if sys.platform == 'win32':
+            try:
+                # Set dark mode for title bar and system controls
+                DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+                hwnd = int(dialog.winfo_id())
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, 
+                    DWMWA_USE_IMMERSIVE_DARK_MODE,
+                    ctypes.byref(ctypes.c_int(1)), 
+                    ctypes.sizeof(ctypes.c_int)
+                )
+            except Exception as e:
+                print(f"Error setting dark title bar for dialog: {e}")
+
 if __name__ == "__main__":
-    ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("blue")
-    
     app = ShittySoundLooper()
     app.run()

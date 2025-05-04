@@ -8,7 +8,7 @@ A simple utility for creating seamless shitty audio loops. This tool analyzes au
 - System tray integration for background playback
 - Volume control
 - Support for WAV and MP3 and OGG files
-- Modern customizable UI with dark mode and only dark mode because this app is going through it's hot goth girl phase.
+- Modern customizable UI with dark mode and only dark mode because this app is going through its hot goth girl phase.
 
 ## Installation
 
