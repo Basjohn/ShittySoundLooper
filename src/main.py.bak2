@@ -14,7 +14,6 @@ import tempfile
 import webbrowser
 from PIL import Image, ImageTk
 import threading
-import time
 if sys.platform == 'win32':
     import win32api
     import win32con
@@ -886,69 +885,40 @@ class ShittySoundLooper:
     def safe_quit(self):
         """Safely quit the application, handling all cleanup"""
         try:
-            # Set a flag to prevent multiple quit attempts
-            if hasattr(self, '_quitting') and self._quitting:
-                return
-            self._quitting = True
-            
             # Save user configuration first
             self.save_config()
             
-            # Stop audio playback and release resources
+            # Stop audio playback
             if self.sound:
-                try:
-                    self.sound.stop()
-                    self.sound = None
-                except Exception as e:
-                    print(f"Error stopping sound: {e}")
+                self.sound.stop()
+                self.sound = None
             
             # Clean up temporary files
             if self.temp_file and os.path.exists(self.temp_file):
                 try:
                     os.remove(self.temp_file)
-                    self.temp_file = None
                 except Exception as e:
                     print(f"Error cleaning up temp file: {e}")
             
             # Stop the system tray icon if it exists
-            if hasattr(self, 'tray_icon') and self.tray_icon:
+            if self.tray_icon:
                 try:
-                    # Make sure the icon is not visible before stopping
-                    if hasattr(self.tray_icon, 'visible') and self.tray_icon.visible:
-                        self.tray_icon.visible = False
                     self.tray_icon.stop()
-                    self.tray_icon = None
                 except Exception as e:
                     print(f"Error stopping tray icon: {e}")
             
-            # Stop any running threads
-            if hasattr(self, 'tray_thread') and self.tray_thread and self.tray_thread.is_alive():
-                try:
-                    # Thread is daemon so it will terminate when main thread exits
-                    self.tray_thread = None
-                except Exception as e:
-                    print(f"Error cleaning up tray thread: {e}")
-            
             # Quit pygame mixer
-            try:
-                pygame.mixer.quit()
-            except Exception as e:
-                print(f"Error quitting pygame mixer: {e}")
+            pygame.mixer.quit()
             
             # Destroy main window
-            try:
-                self.window.quit()
-                self.window.destroy()
-            except Exception as e:
-                print(f"Error destroying window: {e}")
+            self.window.destroy()
             
         except Exception as e:
             print(f"Error in quit: {e}")
             # Force exit if normal shutdown fails
             try:
-                if hasattr(self, 'window') and self.window:
-                    self.window.destroy()
-            except Exception:
+                self.window.destroy()
+            except:
                 pass
             os._exit(0)
     
@@ -958,27 +928,14 @@ class ShittySoundLooper:
             
     def minimize_to_tray(self):
         """Hide the window and show the system tray icon if not already visible"""
-        # Only initialize the system tray if it doesn't exist
-        if not self.tray_icon or not hasattr(self.tray_icon, 'visible'):
+        if not self.tray_icon:
             self.init_system_tray()
-        elif not self.tray_icon.visible:
-            # If the icon exists but isn't visible, make it visible
-            self.tray_icon.visible = True
-            
-        # Hide the window
-        self.window.withdraw()
+        self.window.withdraw()  # Hide the window
         self.hidden = True
     
     def restore_window(self):
         """Restore the window from the system tray"""
-        # Check if we're already in the process of restoring to prevent duplicate calls
-        if hasattr(self, '_restoring') and self._restoring:
-            return
-            
         try:
-            # Set flag to prevent duplicate restore operations
-            self._restoring = True
-            
             # Always attempt to restore, regardless of self.hidden state
             self.window.deiconify()
             self.window.state('normal')  # Ensure it's not minimized
@@ -1000,43 +957,19 @@ class ShittySoundLooper:
                     print(f"Error focusing window: {e}")
         except Exception as e:
             print(f"Error restoring window: {e}")
-        finally:
-            # Clear the restoring flag when done
-            self._restoring = False
     
     def init_system_tray(self):
         """Initialize the system tray icon using pystray"""
-        # Only supported on Windows for now
         if not sys.platform == 'win32':
             return
             
-        # Check if we already have a running tray icon to prevent duplicates
-        if hasattr(self, 'tray_icon') and self.tray_icon:
-            try:
-                # If the icon exists, just make it visible and return
-                if hasattr(self.tray_icon, 'visible'):
-                    self.tray_icon.visible = True
-                    return
-            except Exception:
-                # If there was an error, continue and create a new icon
-                pass
-            
         try:
-            if not self.icon_path or not os.path.exists(self.icon_path):
+            if not self.icon_path:
                 print("Icon file not found")
                 return
                 
-            # Create the icon for the system tray - use with statement to ensure proper resource handling
-            with Image.open(self.icon_path) as img:
-                # Create a copy to avoid issues with the original being closed
-                icon_image = img.copy()
-            
-            # Define a function to handle left-click (default action)
-            def on_activate(icon):
-                print("Left click detected, restoring window")
-                # Use after_idle to ensure this runs on the main thread
-                # We need to use a lambda to delay the execution until after the event loop returns
-                self.window.after(100, lambda: self.restore_window())
+            # Create the icon for the system tray
+            icon_image = Image.open(self.icon_path)
             
             # Define the menu for the system tray
             def on_play_pause(icon, item):
@@ -1058,26 +991,19 @@ class ShittySoundLooper:
                 pystray.MenuItem("Quit", on_quit)
             )
             
-            # Stop any existing tray icon before creating a new one
-            if hasattr(self, 'tray_icon') and self.tray_icon:
-                try:
-                    self.tray_icon.stop()
-                    self.tray_icon = None
-                    # Small delay to ensure the previous icon is fully stopped
-                    time.sleep(0.1)
-                except Exception as e:
-                    print(f"Error stopping previous tray icon: {e}")
+            # Define a direct left-click handler function
+            def on_left_click(icon):
+                # Use after_idle to ensure this runs on the main thread
+                self.window.after_idle(self.restore_window)
             
-            # Create the icon
+            # Create the icon with the left-click handler
             self.tray_icon = pystray.Icon(
                 "ssl_tray", 
                 icon_image, 
                 "Shitty Sound Looper", 
-                menu
+                menu,
+                on_activate=on_left_click  # This handles left-click directly
             )
-            
-            # Manually set the default action (left-click handler)
-            self.tray_icon.on_activate = on_activate
             
             # Apply dark theme to the system tray menu
             if hasattr(self.tray_icon, '_menu') and sys.platform == 'win32':

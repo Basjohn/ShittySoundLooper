@@ -14,30 +14,28 @@ import tempfile
 import webbrowser
 from PIL import Image, ImageTk
 import threading
-import time
 if sys.platform == 'win32':
     import win32api
     import win32con
     import pystray
     import ctypes
 
-# Define dark theme colors
+# Define custom dark theme colors
 DARK_THEME = {
-    "bg_color": "#2E2E2E",        # 10% brighter background
+    "bg_color": "#232323",        # 20% brighter background (was #121212)
     "fg_color": "#F5F5F5",        # Off-white for text
-    "button_color": "#222222",    # Darker gray for buttons (15% lighter than moon box)
-    "hover_color": "#333333",     # Slightly lighter gray for hover states
+    "button_color": "#2D2D2D",    # Dark gray for buttons
+    "hover_color": "#3D3D3D",     # Slightly lighter gray for hover states
     "entry_color": "#1E1E1E",     # Dark gray for input fields
     "border_color": "#3D3D3D",    # Medium gray for borders
-    "slider_color": "#222222",    # Darker gray for slider (same as buttons)
+    "slider_color": "#4D4D4D",    # Medium-light gray for sliders
     "slider_progress": "#BBBBBB", # Light gray for slider progress
     "disabled_text": "#6D6D6D",   # Medium gray for disabled text
     "disabled_button": "#1D1D1D", # Very dark gray for disabled buttons
-    "title_bar_bg": "#222222",    # 20% darker title bar
+    "title_bar_bg": "#333333",    # Medium gray for custom title bar
     "close_button_bg": "#444444", # Lighter gray for close button
     "window_border": "#FFFFFF",   # White for window border
-    "divider_line": "#FFFFFF",    # White for divider line
-    "moon_box_bg": "#1C1C1C"      # 20% darker than background for moon box
+    "divider_line": "#FFFFFF"     # White for divider line
 }
 
 class ShittySoundLooper:
@@ -78,10 +76,12 @@ class ShittySoundLooper:
         # Apply custom dark theme
         self._apply_dark_theme()
         
-        # Set window size and position
-        width, height = 490, 260  # Significantly reduced height to remove empty space
-        self.window.minsize(width, height)
-        self.center_window(width, height)
+        # Make window resizable and set minimum size - 25% less wide, increased height
+        self.window.resizable(True, True)
+        self.window.minsize(490, 350)  # 25% less wide (was 650), increased height
+        
+        # Center window
+        self.center_window(490, 350)
         
         # Load icon - simpler approach for better compatibility
         self.icon_path = self._get_icon_path()
@@ -168,144 +168,30 @@ class ShittySoundLooper:
         x = (screen_width - width) // 2
         y = (screen_height - height) // 2
         self.window.geometry(f"{width}x{height}+{x}+{y}")
-    
-    def _make_draggable(self, widget):
-        """Make a widget and all its children draggable"""
-        widget.bind("<ButtonPress-1>", self._start_window_drag)
-        widget.bind("<ButtonRelease-1>", self._stop_window_drag)
-        widget.bind("<B1-Motion>", self._on_window_drag)
         
-        # Make all children draggable too
-        for child in widget.winfo_children():
-            # Skip buttons, entries, and other interactive widgets
-            if not isinstance(child, (ctk.CTkButton, ctk.CTkEntry, ctk.CTkSlider)):
-                self._make_draggable(child)
-    
-    def _make_dialog_draggable(self, dialog, title_bar, title_label):
-        """Make a dialog window draggable by its title bar"""
-        # Variables to track dragging state for this dialog
-        dialog.is_dragging = False
-        dialog.drag_start_x = 0
-        dialog.drag_start_y = 0
-        
-        # Define drag functions specific to this dialog
-        def start_drag(event):
-            dialog.is_dragging = True
-            dialog.drag_start_x = event.x
-            dialog.drag_start_y = event.y
-            
-        def stop_drag(event):
-            dialog.is_dragging = False
-            
-        def on_drag(event):
-            if dialog.is_dragging:
-                x = dialog.winfo_x() + (event.x - dialog.drag_start_x)
-                y = dialog.winfo_y() + (event.y - dialog.drag_start_y)
-                dialog.geometry(f"+{x}+{y}")
-        
-        # Bind the drag events to the title bar and title label
-        title_bar.bind("<ButtonPress-1>", start_drag)
-        title_bar.bind("<ButtonRelease-1>", stop_drag)
-        title_bar.bind("<B1-Motion>", on_drag)
-        
-        title_label.bind("<ButtonPress-1>", start_drag)
-        title_label.bind("<ButtonRelease-1>", stop_drag)
-        title_label.bind("<B1-Motion>", on_drag)
-    
-    def _start_window_drag(self, event):
-        # Start window dragging when mouse button is pressed
-        # Check if the click is on a draggable area
-        widget_class = event.widget.__class__.__name__
-        if widget_class not in ['CTkButton', 'CTkEntry', 'CTkSlider', 'CTkSwitch']:
-            self.is_dragging = True
-            self.drag_start_x = event.x
-            self.drag_start_y = event.y
-    
-    def _stop_window_drag(self, event):
-        # Stop window dragging when mouse button is released
-        self.is_dragging = False
-    
-    def _on_window_drag(self, event):
-        # Move window during dragging
-        if self.is_dragging:
-            x = self.window.winfo_x() + (event.x - self.drag_start_x)
-            y = self.window.winfo_y() + (event.y - self.drag_start_y)
-            self.window.geometry(f"+{x}+{y}")
+    # Window dragging methods
 
+    
     def on_window_close(self):
-        # Create a custom dialog with the same styling as the main window
         dialog = ctk.CTkToplevel(self.window)
-        dialog.title("Exit")  # This won't be visible but helps with taskbar
-        dialog.geometry("350x150")  # Slightly taller to accommodate title bar
+        dialog.title("Exit")
+        dialog.geometry("350x120")
         dialog.attributes('-topmost', True)
         dialog.resizable(False, False)
-        dialog.overrideredirect(True)  # Remove default title bar
         self._apply_dark_theme_to_dialog(dialog)
         
-        # Create a border frame with white background
-        border_frame = ctk.CTkFrame(dialog, fg_color=DARK_THEME["window_border"], corner_radius=0)
-        border_frame.pack(fill="both", expand=True, padx=0, pady=0)
+        label = ctk.CTkLabel(dialog, text="Exit or Minimize to Tray?")
+        label.pack(pady=20)
         
-        # Create an inner frame with the app's background color (3px border effect)
-        inner_frame = ctk.CTkFrame(border_frame, fg_color=DARK_THEME["bg_color"], corner_radius=0)
-        inner_frame.pack(fill="both", expand=True, padx=3, pady=3)
-        
-        # Create custom title bar
-        title_bar = ctk.CTkFrame(inner_frame, fg_color=DARK_THEME["title_bar_bg"], height=36, corner_radius=0)
-        title_bar.pack(fill="x", padx=0, pady=0)
-        
-        # Title in the center
-        title_label = ctk.CTkLabel(title_bar, text="Exit Confirmation", text_color="white", font=("Arial", 14, "bold"))
-        title_label.pack(side="left", expand=True, fill="both")
-        
-        # Close button
-        close_button = ctk.CTkButton(
-            title_bar, 
-            text="✕", 
-            command=dialog.destroy,
-            width=30,
-            height=30,
-            corner_radius=0,
-            fg_color=DARK_THEME["close_button_bg"],
-            hover_color=DARK_THEME["hover_color"]
-        )
-        close_button.pack(side="right", padx=3, pady=3)
-        
-        # Add a white horizontal divider line below the title bar
-        divider = ctk.CTkFrame(inner_frame, fg_color=DARK_THEME["divider_line"], height=2, corner_radius=0)
-        divider.pack(fill="x", padx=0, pady=0)
-        
-        # Content frame
-        content_frame = ctk.CTkFrame(inner_frame, fg_color="transparent")
-        content_frame.pack(fill="both", expand=True, padx=20, pady=10)
-        
-        # Dialog content
-        label = ctk.CTkLabel(content_frame, text="Exit or Minimize to Tray?")
-        label.pack(pady=10)
-        
-        button_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+        button_frame = ctk.CTkFrame(dialog)
+        button_frame.configure(fg_color="transparent")
         button_frame.pack(pady=10)
         
-        exit_button = ctk.CTkButton(
-            button_frame, 
-            text="Exit", 
-            command=lambda: self.quit_and_destroy(dialog),
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
-        )
+        exit_button = ctk.CTkButton(button_frame, text="Exit", command=lambda: self.quit_and_destroy(dialog))
         exit_button.pack(side="left", padx=10)
         
-        minimize_button = ctk.CTkButton(
-            button_frame, 
-            text="Minimize to Tray", 
-            command=lambda: self.minimize_and_destroy(dialog),
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
-        )
+        minimize_button = ctk.CTkButton(button_frame, text="Minimize to Tray", command=lambda: self.minimize_and_destroy(dialog))
         minimize_button.pack(side="right", padx=10)
-        
-        # Make the dialog draggable
-        self._make_dialog_draggable(dialog, title_bar, title_label)
         
         dialog.transient(self.window)
         dialog.grab_set()
@@ -325,22 +211,30 @@ class ShittySoundLooper:
     def minimize_and_destroy(self, dialog):
         dialog.destroy()
         self.minimize_to_tray()
+    
+    # Window dragging methods
+    def _start_window_drag(self, event):
+        self.is_dragging = True
+        self.drag_start_x = event.x
+        self.drag_start_y = event.y
+    
+    def _stop_window_drag(self, event):
+        self.is_dragging = False
+    
+    def _on_window_drag(self, event):
+        if self.is_dragging:
+            x = self.window.winfo_x() + (event.x - self.drag_start_x)
+            y = self.window.winfo_y() + (event.y - self.drag_start_y)
+            self.window.geometry(f"+{x}+{y}")
         
     def create_ui(self):
-        # Create a border frame with white background - use grid instead of pack for better containment
-        self.window.grid_rowconfigure(0, weight=1)
-        self.window.grid_columnconfigure(0, weight=1)
+        # Create a border frame with white background
         border_frame = ctk.CTkFrame(self.window, fg_color=DARK_THEME["window_border"], corner_radius=0)
-        border_frame.grid(row=0, column=0, sticky="nsew")
+        border_frame.pack(fill="both", expand=True, padx=0, pady=0)
         
         # Create an inner frame with the app's background color (3px border effect)
-        border_frame.grid_rowconfigure(0, weight=1)
-        border_frame.grid_columnconfigure(0, weight=1)
         inner_frame = ctk.CTkFrame(border_frame, fg_color=DARK_THEME["bg_color"], corner_radius=0)
-        inner_frame.grid(row=0, column=0, sticky="nsew", padx=3, pady=3)  # Use grid with sticky to maintain border
-        
-        # We'll make specific frames draggable instead of the entire inner frame
-        # This allows controls to still be interactive
+        inner_frame.pack(fill="both", expand=True, padx=3, pady=3)
         
         # Create custom title bar
         title_bar = ctk.CTkFrame(inner_frame, fg_color=DARK_THEME["title_bar_bg"], height=36, corner_radius=0)
@@ -351,14 +245,11 @@ class ShittySoundLooper:
         title_bar.bind("<ButtonRelease-1>", self._stop_window_drag)
         title_bar.bind("<B1-Motion>", self._on_window_drag)
         
-        # Title in the center - 20% larger font
-        title_label = ctk.CTkLabel(title_bar, text="Shitty Sound Looper", text_color="white", font=("Arial", 17, "bold"))
-        title_label.pack(side="left", expand=True, fill="both")
+        # Title bar icon removed as requested
         
-        # Also bind the title label for dragging since it takes up most of the title bar
-        title_label.bind("<ButtonPress-1>", self._start_window_drag)
-        title_label.bind("<ButtonRelease-1>", self._stop_window_drag)
-        title_label.bind("<B1-Motion>", self._on_window_drag)
+        # Title in the center
+        title_label = ctk.CTkLabel(title_bar, text="Shitty Sound Looper", text_color="white", font=("Arial", 14, "bold"))
+        title_label.pack(side="left", expand=True, fill="both")
         
         # Close button (smaller and lighter gray square)
         close_button = ctk.CTkButton(
@@ -377,199 +268,66 @@ class ShittySoundLooper:
         divider = ctk.CTkFrame(inner_frame, fg_color=DARK_THEME["divider_line"], height=2, corner_radius=0)
         divider.pack(fill="x", padx=0, pady=0)
         
-        # Main content frame on top of the draggable background
+        # Main content frame
         main_frame = ctk.CTkFrame(inner_frame, fg_color="transparent")
-        main_frame.pack(fill="both", expand=True, padx=20, pady=(20, 0))  # Removed bottom padding completely
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
-        # Make the main frame directly draggable
-        main_frame.bind("<ButtonPress-1>", self._start_window_drag)
-        main_frame.bind("<ButtonRelease-1>", self._stop_window_drag)
-        main_frame.bind("<B1-Motion>", self._on_window_drag)
+        # Main content area with file selection and controls
+        content_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        content_frame.pack(fill="both", expand=True)
         
-        # Left side vertical layout frame
-        left_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        # Left side frame for buttons
+        left_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
         left_frame.pack(side="left", fill="y", padx=(0, 10))
         
         # File entry at the top
-        self.file_entry = ctk.CTkEntry(main_frame, placeholder_text="Select an audio file...")
-        self.file_entry.pack(side="top", fill="x", pady=(0, 10))
+        self.file_entry = ctk.CTkEntry(content_frame, placeholder_text="Select an audio file...")
+        self.file_entry.pack(side="top", fill="x", pady=(0, 10), padx=(0, 0))
         
-        # Browse button on the left with explicit color
-        browse_button = ctk.CTkButton(
-            left_frame, 
-            text="Browse", 
-            command=self.browse_file,
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
-        )
+        # Browse button on the left
+        browse_button = ctk.CTkButton(left_frame, text="Browse", command=self.browse_file)
         browse_button.pack(fill="x", pady=(0, 10))
         
-        # Play button below browse with explicit color
+        # Play button below browse
         self.play_button = ctk.CTkButton(
             left_frame, 
             text="Play", 
-            command=self.play_pause,
-            state="disabled",
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
-        )
-        self.play_button.pack(fill="x", pady=(0, 10))
-        
-        # Minimize to tray button between Play and ? buttons
-        minimize_button = ctk.CTkButton(
-            left_frame, 
-            text="Minimize", 
-            command=self.minimize_to_tray,
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
-        )
-        minimize_button.pack(fill="x", pady=(0, 10))
-        
-        # About button (changed to "?") under Minimize button with explicit color
-        about_button = ctk.CTkButton(
-            left_frame, 
-            text="?", 
-            command=self.show_about,
-            width=40,
-            height=40,
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
-        )
-        about_button.pack(fill="x", pady=(0, 10))
-        
-        # Volume control frame
-        # Store a reference to the volume frame for easier access
-        self.volume_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        self.volume_frame.pack(fill="x", pady=(0, 10))
-        
-        self.volume_label = ctk.CTkLabel(self.volume_frame, text="Volume:")
-        self.volume_label.pack(side="left", padx=(0, 5))
-        
-        self.volume_slider = ctk.CTkSlider(
-            self.volume_frame, 
-            from_=0, 
-            to=100,
-            number_of_steps=100,
-            command=self.update_volume,
-            button_color=DARK_THEME["slider_color"],
-            button_hover_color=DARK_THEME["hover_color"],
-            progress_color=DARK_THEME["slider_progress"]
-        )
-        self.volume_slider.set(50)  # Default to 50%
-        self.volume_slider.pack(side="left", fill="x", expand=True, padx=5)
-        
-        # Store a reference to the volume value label
-        self.volume_value = ctk.CTkLabel(self.volume_frame, text="50%", width=40)
-        self.volume_value.pack(side="left", padx=(5, 0))
-        
-        # Link the volume slider to the value label
-        def update_volume_label(value):
-            self.volume_value.configure(text=f"{int(value)}%")
-            self.update_volume(value)
-            
-        self.volume_slider.configure(command=update_volume_label)
-        
-        # No spacer frame - we'll make the main frame itself draggable
-        
-        # Bottom frame for moon icon (right-aligned) - with minimal height
-        bottom_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        bottom_frame.pack(fill="x", pady=(5, 0), padx=0, expand=False, ipady=0)  # Added ipady=0 to minimize height
-        
-        # Explicitly make the bottom frame draggable
-        bottom_frame.bind("<ButtonPress-1>", self._start_window_drag)
-        bottom_frame.bind("<ButtonRelease-1>", self._stop_window_drag)
-        bottom_frame.bind("<B1-Motion>", self._on_window_drag)
-        
-        # Create a right-aligned frame for the moon icon
-        moon_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
-        moon_frame.pack(side="right", padx=(0, 0))
-        
-        # Moon icon with raised appearance (30% lighter background)
-        try:
-            # Use the predefined moon box background color
-            moon_box_bg = DARK_THEME["moon_box_bg"]
-            
-            # Create a frame with rounded corners for the raised effect
-            moon_bg_frame = ctk.CTkFrame(
-                moon_frame, 
-                fg_color=moon_box_bg,
-                corner_radius=10,  # Rounded corners
-                border_width=0
-            )
-            moon_bg_frame.pack(padx=0, pady=(0, 0))  # No bottom padding
-            
-            moon_icon_path = "D:\\Artwork\\ICONS\\MoonIcon.png"
-            # Use CTkImage instead of PIL.ImageTk.PhotoImage for better HighDPI support
-            moon_img = ctk.CTkImage(light_image=Image.open(moon_icon_path),
-                                   dark_image=Image.open(moon_icon_path),
-                                   size=(90, 90))  # Further reduced size
-            moon_label = ctk.CTkLabel(moon_bg_frame, text="", image=moon_img)
-            moon_label.pack(padx=3, pady=3)  # Minimal padding for a more compact look
         except Exception as e:
-            print(f"Error loading moon icon: {e}")
+            print(f"Error extracting icon: {e}")
+                
+    return None
         
-        # Status label is created but not displayed (functionality maintained)
-        self.status_label = ctk.CTkLabel(main_frame, text="Ready", anchor="w")
+def _get_resource_path(self):
+    """Get path to resources, works for dev and PyInstaller"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        return os.path.join(sys._MEIPASS, "resources")
+    else:
+        # Running as script
+        return os.path.join(self.base_path, "resources")
+    
+def center_window(self, width, height):
+    """Center the window on the screen"""
+    screen_width = self.window.winfo_screenwidth()
+    screen_height = self.window.winfo_screenheight()
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+    self.window.geometry(f"{width}x{height}+{x}+{y}")
+        # Not packing the status label to remove it from the UI
 
     def show_about(self):
-        # Create a custom dialog with the same styling as the main window
         about_dialog = ctk.CTkToplevel(self.window)
-        about_dialog.title("About Shitty Sound Looper")  # This won't be visible but helps with taskbar
-        about_dialog.geometry("400x330")  # Slightly taller to accommodate title bar
+        about_dialog.title("About Shitty Sound Looper")
+        about_dialog.geometry("400x300")
         about_dialog.attributes('-topmost', True)
         about_dialog.resizable(False, False)
-        about_dialog.overrideredirect(True)  # Remove default title bar
         self._apply_dark_theme_to_dialog(about_dialog)
         
-        # Create a border frame with white background
-        border_frame = ctk.CTkFrame(about_dialog, fg_color=DARK_THEME["window_border"], corner_radius=0)
-        border_frame.pack(fill="both", expand=True, padx=0, pady=0)
-        
-        # Create an inner frame with the app's background color (3px border effect)
-        inner_frame = ctk.CTkFrame(border_frame, fg_color=DARK_THEME["bg_color"], corner_radius=0)
-        inner_frame.pack(fill="both", expand=True, padx=3, pady=3)
-        
-        # Create custom title bar
-        title_bar = ctk.CTkFrame(inner_frame, fg_color=DARK_THEME["title_bar_bg"], height=36, corner_radius=0)
-        title_bar.pack(fill="x", padx=0, pady=0)
-        
-        # Title in the center
-        title_label = ctk.CTkLabel(title_bar, text="About", text_color="white", font=("Arial", 14, "bold"))
-        title_label.pack(side="left", expand=True, fill="both")
-        
-        # Close button
-        close_button = ctk.CTkButton(
-            title_bar, 
-            text="✕", 
-            command=about_dialog.destroy,
-            width=30,
-            height=30,
-            corner_radius=0,
-            fg_color=DARK_THEME["close_button_bg"],
-            hover_color=DARK_THEME["hover_color"]
-        )
-        close_button.pack(side="right", padx=3, pady=3)
-        
-        # Add a white horizontal divider line below the title bar
-        divider = ctk.CTkFrame(inner_frame, fg_color=DARK_THEME["divider_line"], height=2, corner_radius=0)
-        divider.pack(fill="x", padx=0, pady=0)
-        
-        # Content frame
-        content_frame = ctk.CTkFrame(inner_frame, fg_color="transparent")
-        content_frame.pack(fill="both", expand=True, padx=20, pady=10)
-        
-        # About content
-        app_title_label = ctk.CTkLabel(content_frame, text="Shitty Sound Looper", font=("Arial", 16, "bold"))
-        app_title_label.pack(pady=10)
-        
-        version_label = ctk.CTkLabel(content_frame, text="Version 1.0")
-        version_label.pack(pady=5)
-        
         message = "Made for my own shitty sleep, shared freely for yours.\nYou can always donate to my dumbass though or buy my shitty literature."
-        label = ctk.CTkLabel(content_frame, text=message, wraplength=360)
+        label = ctk.CTkLabel(about_dialog, text=message, wraplength=360)
         label.pack(pady=(20, 15))
         
-        link_frame = ctk.CTkFrame(content_frame)
+        link_frame = ctk.CTkFrame(about_dialog)
         link_frame.configure(fg_color="transparent")
         link_frame.pack(pady=(0, 20))
         
@@ -578,9 +336,7 @@ class ShittySoundLooper:
             text="PayPal",
             command=lambda: webbrowser.open("https://www.paypal.com/donate/?business=UBZJY8KHKKLGC&no_recurring=0&item_name=Why+are+you+doing+this%3F+Are+you+drunk%3F&currency_code=USD"),
             corner_radius=10,
-            width=100,
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
+            width=100
         )
         paypal_button.pack(side="left", padx=5)
         
@@ -589,9 +345,7 @@ class ShittySoundLooper:
             text="Goodreads",
             command=lambda: webbrowser.open("https://www.goodreads.com/book/show/25006763-usu"),
             corner_radius=10,
-            width=100,
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
+            width=100
         )
         goodreads_button.pack(side="left", padx=5)
         
@@ -600,17 +354,12 @@ class ShittySoundLooper:
             text="Amazon",
             command=lambda: webbrowser.open("https://www.amazon.com/Usu-Jayde-Ver-Elst-ebook/dp/B00V8A5K7Y"),
             corner_radius=10,
-            width=100,
-            fg_color=DARK_THEME["button_color"],
-            hover_color=DARK_THEME["hover_color"]
+            width=100
         )
         amazon_button.pack(side="left", padx=5)
         
-        # Make the dialog draggable
-        self._make_dialog_draggable(about_dialog, title_bar, title_label)
-        
         # Center the dialog on the main window
-        about_dialog.update_idletasks()
+        self.window.update_idletasks()
         x = self.window.winfo_x() + (self.window.winfo_width() - about_dialog.winfo_width()) // 2
         y = self.window.winfo_y() + (self.window.winfo_height() - about_dialog.winfo_height()) // 2
         about_dialog.geometry(f"+{x}+{y}")
@@ -618,40 +367,6 @@ class ShittySoundLooper:
         about_dialog.transient(self.window)
         about_dialog.grab_set()
         
-    def process_audio(self, filename):
-        if not filename or not os.path.exists(filename):
-            return
-            
-        self.audio_file = filename
-        self.status_label.configure(text="Processing audio...")
-        
-        try:
-            # Stop any currently playing sound
-            if self.sound:
-                self.sound.stop()
-                self.playing = False
-                self.play_button.configure(text="Play")
-            
-            # Clear previous temp file if it exists
-            if self.temp_file and os.path.exists(self.temp_file):
-                try:
-                    os.remove(self.temp_file)
-                    self.temp_file = None
-                except Exception as e:
-                    print(f"Error removing temp file: {e}")
-            
-            # Check file extension
-            extension = os.path.splitext(filename)[1].lower()
-            
-            if extension == '.wav':
-                processed_file = self.process_wav_with_zero_crossing(filename)
-                if processed_file:
-                    self.sound = pygame.mixer.Sound(processed_file)
-        except Exception as e:
-            print(f"Error processing audio: {e}")
-            self.status_label.configure(text=f"Error: {str(e)[:50]}...")
-            return
-            
     def browse_file(self):
         # Determine initial directory
         initial_dir = self.last_dir
@@ -675,12 +390,6 @@ class ShittySoundLooper:
         if filename:
             self.file_entry.delete(0, tk.END)
             self.file_entry.insert(0, filename)
-            
-            # Save the last directory
-            self.last_dir = os.path.dirname(filename)
-            
-            # Process the audio file
-            self.process_audio(filename)
             
             # Save the last directory
             self.last_dir = os.path.dirname(filename)
@@ -886,69 +595,40 @@ class ShittySoundLooper:
     def safe_quit(self):
         """Safely quit the application, handling all cleanup"""
         try:
-            # Set a flag to prevent multiple quit attempts
-            if hasattr(self, '_quitting') and self._quitting:
-                return
-            self._quitting = True
-            
             # Save user configuration first
             self.save_config()
             
-            # Stop audio playback and release resources
+            # Stop audio playback
             if self.sound:
-                try:
-                    self.sound.stop()
-                    self.sound = None
-                except Exception as e:
-                    print(f"Error stopping sound: {e}")
+                self.sound.stop()
+                self.sound = None
             
             # Clean up temporary files
             if self.temp_file and os.path.exists(self.temp_file):
                 try:
                     os.remove(self.temp_file)
-                    self.temp_file = None
                 except Exception as e:
                     print(f"Error cleaning up temp file: {e}")
             
             # Stop the system tray icon if it exists
-            if hasattr(self, 'tray_icon') and self.tray_icon:
+            if self.tray_icon:
                 try:
-                    # Make sure the icon is not visible before stopping
-                    if hasattr(self.tray_icon, 'visible') and self.tray_icon.visible:
-                        self.tray_icon.visible = False
                     self.tray_icon.stop()
-                    self.tray_icon = None
                 except Exception as e:
                     print(f"Error stopping tray icon: {e}")
             
-            # Stop any running threads
-            if hasattr(self, 'tray_thread') and self.tray_thread and self.tray_thread.is_alive():
-                try:
-                    # Thread is daemon so it will terminate when main thread exits
-                    self.tray_thread = None
-                except Exception as e:
-                    print(f"Error cleaning up tray thread: {e}")
-            
             # Quit pygame mixer
-            try:
-                pygame.mixer.quit()
-            except Exception as e:
-                print(f"Error quitting pygame mixer: {e}")
+            pygame.mixer.quit()
             
             # Destroy main window
-            try:
-                self.window.quit()
-                self.window.destroy()
-            except Exception as e:
-                print(f"Error destroying window: {e}")
+            self.window.destroy()
             
         except Exception as e:
             print(f"Error in quit: {e}")
             # Force exit if normal shutdown fails
             try:
-                if hasattr(self, 'window') and self.window:
-                    self.window.destroy()
-            except Exception:
+                self.window.destroy()
+            except:
                 pass
             os._exit(0)
     
@@ -958,85 +638,45 @@ class ShittySoundLooper:
             
     def minimize_to_tray(self):
         """Hide the window and show the system tray icon if not already visible"""
-        # Only initialize the system tray if it doesn't exist
-        if not self.tray_icon or not hasattr(self.tray_icon, 'visible'):
+        if not self.tray_icon:
             self.init_system_tray()
-        elif not self.tray_icon.visible:
-            # If the icon exists but isn't visible, make it visible
-            self.tray_icon.visible = True
-            
-        # Hide the window
-        self.window.withdraw()
+        self.window.withdraw()  # Hide the window
         self.hidden = True
     
     def restore_window(self):
         """Restore the window from the system tray"""
-        # Check if we're already in the process of restoring to prevent duplicate calls
-        if hasattr(self, '_restoring') and self._restoring:
-            return
-            
         try:
-            # Set flag to prevent duplicate restore operations
-            self._restoring = True
-            
-            # Always attempt to restore, regardless of self.hidden state
-            self.window.deiconify()
-            self.window.state('normal')  # Ensure it's not minimized
-            self.window.lift()
-            self.window.focus_force()
-            self.hidden = False
-            
-            # Additional fixes for Windows focus issues
-            if sys.platform == 'win32':
-                try:
-                    # Ensure window is visible and focused
-                    self.window.attributes('-topmost', True)
-                    self.window.update()
-                    self.window.attributes('-topmost', False)
-                    
-                    # Force window to be redrawn and visible
-                    self.window.update_idletasks()
-                except Exception as e:
-                    print(f"Error focusing window: {e}")
+            if self.hidden:
+                self.window.deiconify()
+                self.window.state('normal')  # Ensure it's not minimized
+                self.window.lift()
+                self.window.focus_force()
+                self.hidden = False
+                
+                # Additional fixes for Windows focus issues
+                if sys.platform == 'win32':
+                    try:
+                        # Ensure window is visible and focused
+                        self.window.attributes('-topmost', True)
+                        self.window.update()
+                        self.window.attributes('-topmost', False)
+                    except Exception as e:
+                        print(f"Error focusing window: {e}")
         except Exception as e:
             print(f"Error restoring window: {e}")
-        finally:
-            # Clear the restoring flag when done
-            self._restoring = False
     
     def init_system_tray(self):
         """Initialize the system tray icon using pystray"""
-        # Only supported on Windows for now
         if not sys.platform == 'win32':
             return
             
-        # Check if we already have a running tray icon to prevent duplicates
-        if hasattr(self, 'tray_icon') and self.tray_icon:
-            try:
-                # If the icon exists, just make it visible and return
-                if hasattr(self.tray_icon, 'visible'):
-                    self.tray_icon.visible = True
-                    return
-            except Exception:
-                # If there was an error, continue and create a new icon
-                pass
-            
         try:
-            if not self.icon_path or not os.path.exists(self.icon_path):
+            if not self.icon_path:
                 print("Icon file not found")
                 return
                 
-            # Create the icon for the system tray - use with statement to ensure proper resource handling
-            with Image.open(self.icon_path) as img:
-                # Create a copy to avoid issues with the original being closed
-                icon_image = img.copy()
-            
-            # Define a function to handle left-click (default action)
-            def on_activate(icon):
-                print("Left click detected, restoring window")
-                # Use after_idle to ensure this runs on the main thread
-                # We need to use a lambda to delay the execution until after the event loop returns
-                self.window.after(100, lambda: self.restore_window())
+            # Create the icon for the system tray
+            icon_image = Image.open(self.icon_path)
             
             # Define the menu for the system tray
             def on_play_pause(icon, item):
@@ -1044,59 +684,47 @@ class ShittySoundLooper:
                 self.window.after(0, self.toggle_pause)
                 
             def on_restore(icon, item):
-                # Schedule action on main thread
-                self.window.after(0, self.restore_window)
-                
-            def on_quit(icon, item):
-                # Schedule quit on main thread
-                self.window.after(0, self.safe_quit)
+                self.restore_window()
             
-            # Create the menu with dark theme styling
-            menu = pystray.Menu(
-                pystray.MenuItem("Play/Pause", on_play_pause),
-                pystray.MenuItem("Restore", on_restore),
-                pystray.MenuItem("Quit", on_quit)
+            def on_quit(icon, item):
+                self.safe_quit()
+            
+            # Create menu
+            menu = (
+                pystray.MenuItem('Play/Pause', on_play_pause),
+                pystray.MenuItem('Restore', on_restore),
+                pystray.MenuItem('Quit', on_quit)
             )
             
-            # Stop any existing tray icon before creating a new one
-            if hasattr(self, 'tray_icon') and self.tray_icon:
-                try:
-                    self.tray_icon.stop()
-                    self.tray_icon = None
-                    # Small delay to ensure the previous icon is fully stopped
-                    time.sleep(0.1)
-                except Exception as e:
-                    print(f"Error stopping previous tray icon: {e}")
-            
-            # Create the icon
+            # Create the icon with menu
             self.tray_icon = pystray.Icon(
-                "ssl_tray", 
-                icon_image, 
-                "Shitty Sound Looper", 
+                "shitty_sound_looper",
+                icon_image,
+                "Shitty Sound Looper",
                 menu
             )
             
-            # Manually set the default action (left-click handler)
-            self.tray_icon.on_activate = on_activate
-            
-            # Apply dark theme to the system tray menu
-            if hasattr(self.tray_icon, '_menu') and sys.platform == 'win32':
-                try:
-                    # Set the menu's background and text colors
-                    self.tray_icon._menu_background_color = DARK_THEME["bg_color"]
-                    self.tray_icon._menu_text_color = DARK_THEME["fg_color"]
-                    self.tray_icon._menu_highlight_color = DARK_THEME["hover_color"]
-                except:
-                    # If custom styling fails, continue with default styling
-                    pass
-            
-            # Setup function just to make the icon visible
+            # Setup icon behavior
             def setup(icon):
                 icon.visible = True
+                
+                # Handle left click
+                def on_click(icon, button, pressed):
+                    if button == pystray.mouse.Button.left and pressed:
+                        self.restore_window()
+                
+                icon.on_click = on_click
             
-            # Start the icon in a separate thread
-            self.tray_thread = threading.Thread(target=self.tray_icon.run, kwargs={'setup': setup})
-            self.tray_thread.daemon = True  # So it doesn't block app exit
+            # Start the icon in a separate thread with a slight delay
+            # to ensure the main window has time to initialize first
+            def delayed_start():
+                # Small delay to ensure main window gets focus first
+                import time
+                time.sleep(0.5)
+                self.tray_icon.run(setup)
+            
+            self.tray_thread = threading.Thread(target=delayed_start)
+            self.tray_thread.daemon = True
             self.tray_thread.start()
             
         except Exception as e:
@@ -1121,13 +749,7 @@ class ShittySoundLooper:
                     config = json.load(f)
                     self.last_dir = config.get('last_dir', os.path.expanduser("~"))
                     volume = config.get('volume', 50)
-                    
-                    # Set the volume slider value
                     self.volume_slider.set(volume)
-                    
-                    # Update the volume label to match the slider value
-                    self.volume_value.configure(text=f"{int(volume)}%")
-                    
                     last_file = config.get('last_file', '')
                     if last_file and os.path.exists(last_file):
                         self.file_entry.delete(0, tk.END)
