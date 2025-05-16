@@ -1,0 +1,129 @@
+QWidget {
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+QMainWindow {
+    background-color: #1a1a1a;
+}
+
+QMenuBar {
+    background-color: #222222;
+    color: #f0f0f0;
+}
+
+QMenuBar::item {
+    padding: 5px 15px;
+    background-color: #222222;
+    border: none;
+}
+
+QMenuBar::item:selected {
+    background-color: #333333;
+}
+
+QMenu {
+    background-color: #222222;
+    border: 1px solid #333333;
+}
+
+QMenu::item {
+    padding: 5px 25px;
+    background-color: transparent;
+}
+
+QMenu::item:selected {
+    background-color: #333333;
+}
+
+QMenu::item:disabled {
+    color: #888888;
+}
+
+QFrame {
+    background-color: #222222;
+    border: 1px solid #333333;
+    border-radius: 5px;
+}
+
+QLabel {
+    color: #f0f0f0;
+}
+
+QLabel#FileLabel {
+    padding: 5px;
+    border: 1px solid #333333;
+    border-radius: 5px;
+}
+
+QLabel#VolumeLabel {
+    font-weight: bold;
+}
+
+QLabel#VolumeValue {
+    font-weight: bold;
+}
+
+QSlider::groove:horizontal {
+    background: #333333;
+    height: 4px;
+    border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+    background: #f0f0f0;
+    width: 12px;
+    margin: -4px 0;
+    border-radius: 6px;
+}
+
+QSlider::add-page:horizontal {
+    background: #444444;
+}
+
+QSlider::sub-page:horizontal {
+    background: #666666;
+}
+
+QPushButton {
+    background-color: #222222;
+    color: #f0f0f0;
+    border: 1px solid #333333;
+    border-radius: 5px;
+    padding: 5px 15px;
+    font-size: 12px;
+}
+
+QPushButton:hover {
+    background-color: #333333;
+}
+
+QPushButton:pressed {
+    background-color: #444444;
+}
+
+QPushButton#DialogButton {
+    background-color: #222222;
+    color: #F5F5F5;
+    border: 3px solid #F5F5F5;
+    border-radius: 5px;
+    padding: 5px 15px;
+    font-size: 12px;
+}
+
+QPushButton#DialogButton:hover {
+    background-color: #333333;
+}
+
+QPushButton#DialogButton:pressed {
+    background-color: #444444;
+}
+
+QToolTip {
+    background-color: #333333;
+    color: white;
+    border: 1px solid #888888;
+    padding: 2px;
+    border-radius: 3px;
+}

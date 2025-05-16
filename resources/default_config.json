@@ -1,0 +1,18 @@
+{
+    "window_position": {
+        "x": 100,
+        "y": 100
+    },
+    "transparent_window": true,
+    "prevent_sleep": false,
+    "restore_volume": false,
+    "restore_volume_level": 50,
+    "stream_a": {
+        "volume": 10,
+        "audio_file": ""
+    },
+    "stream_b": {
+        "volume": 10,
+        "audio_file": ""
+    }
+}
